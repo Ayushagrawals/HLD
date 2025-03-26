@@ -1,0 +1,110 @@
+High-Level Design (HLD): Transport/Hotel Booking System
+1. System Overview
+This system allows users to:
+
+Search transport (flight/train/bus) or hotel options.
+
+Filter results.
+
+Book tickets/rooms.
+
+Handle payments.
+
+Get confirmation via notifications.
+
+2. Architecture Components
+✅ Clients
+Web & Mobile Clients
+
+Use HTTPS for communication
+
+🌐 API Gateway
+Routes requests to appropriate services (Search, Booking, Payment, Auth)
+
+Handles rate limiting, logging, and auth validation
+
+🔐 Authentication Service
+JWT-based authentication (token generation on login/register)
+
+Stateless session handling
+
+Auth token sent in headers for every API request
+
+⚙️ Load Balancer
+Round Robin or Least Connections strategy
+
+Handles horizontal scaling of stateless microservices
+
+🧩 Microservices
+Search Service: Handles search/filter logic using third-party APIs (uses Adapter pattern).
+
+Booking Service: Manages bookings and interacts with payment (uses Facade + Strategy + Adapter).
+
+Payment Service: Integrates with external payment gateways.
+
+User Service: User profile and preferences.
+
+Notification Service: Push/email notifications (asynchronous via Kafka).
+
+3. Database Design
+Table	Key Columns
+User	user_id (PK), name, email, phone
+Booking	booking_id (PK), user_id (FK), transport_id, payment_id, status
+Transport	transport_id (PK), type (Flight/Train/Bus), provider_id
+Payment	payment_id (PK), user_id (FK), mode, gateway, status
+Provider	provider_id (PK), name (Indigo, RedBus, etc.)
+Discount	discount_id (PK), code, amount, validity
+4. Design Patterns Used
+Pattern	Usage
+Strategy	Choosing transport mode or payment mode
+Adapter	Integrating various providers (SpiceJet, Indigo, Redbus...)
+Facade	Combine multiple adapter calls under one search/booking call
+Singleton	Used by services (like NotificationManager, ConfigManager)
+Observer	Trigger notifications post booking (email, SMS)
+5. Asynchronous Communication (Kafka)
+When a booking is successful:
+
+An event is published to Kafka.
+
+Notification Service subscribes and sends email/SMS.
+
+Helps in decoupling.
+
+6. Caching
+Redis (or Memcached) used to cache:
+
+Frequent search queries (read-heavy)
+
+Provider metadata (static info)
+
+Use LRU (Least Recently Used) eviction strategy
+
+7. Database
+Primary: Relational DB (MySQL/PostgreSQL)
+
+Strong consistency needed for bookings and payments
+
+Use Read Replicas for scaling search (eventually consistent)
+
+Secondary (Optional): NoSQL (like MongoDB) for logs or user preferences
+
+8. Scaling Strategy
+Horizontally scalable stateless microservices
+
+Containerization with Docker, orchestrated using Kubernetes
+
+Auto-scaling policies based on CPU/Memory usage
+
+9. Security
+HTTPS for all endpoints
+
+JWT authentication with expiration & refresh tokens
+
+API Gateway rate limiting to prevent abuse
+
+10. Deployment
+CI/CD pipeline (GitHub Actions / Jenkins)
+
+Canary / Blue-Green Deployment
+
+Cloud-native deployment (AWS / GCP)

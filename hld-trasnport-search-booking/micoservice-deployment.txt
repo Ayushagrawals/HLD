@@ -1,0 +1,38 @@
+                    [Client]
+                       |
+              +--------+--------+
+              | Load Balancer   |
+              +--------+--------+
+                       |
+             +---------+--------+
+             |   API Gateway    |
+             +----+--------+----+
+                  |        |
+          +-------+        +--------+
+          |                         |
+ [Search Microservice]     [Booking Microservice]
+     (Stateless)                 (Stateful)
+     NoSQL DB                   SQL DB (with replicas)
+          |
+  [Redis/Elasticsearch]        |
+                               |
+                   +-----------+-----------+
+                   |  Notification Service |
+                   +-----------------------+
+
+
+You can use Kafka or SQS between Booking and Notification for event-driven flow:
+
+Booking confirmed → emit BookingConfirmedEvent → Kafka → Notification Service picks it → sends email/SMS.
+
+
++--------------------------+-------------------------------------------------------------+
+| Aspect                  | Recommendation                                               |
++--------------------------+-------------------------------------------------------------+
+| Write Operations         | Always go to SQL Master                                     |
+| Non-Critical Read Ops    | Use Replicas (may have slight lag)                          |
+| Critical Read Ops        | Use Master DB to ensure consistency                         |
+| Replication Type         | Default: Asynchronous                                       |
+| When to Use Sync Replication | If data consistency is absolutely critical               |
++--------------------------+-------------------------------------------------------------+
+    

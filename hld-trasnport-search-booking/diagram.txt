@@ -1,0 +1,62 @@
+                            [ User / Client ]
+                                   |
+                            [ Load Balancer ]
+                                   |
+                             [ API Gateway ]
+                     (Routing + JWT Auth + Rate Limiting)
+                                   |
+          -----------------------------------------------------
+          |                       |                         |
+   [ Search Service ]     [ Booking Service ]       [ Payment Service ]
+          |                       |                         |
+   [ Redis Cache (LRU) ]    [ SQL DB - Master ]       [ Strategy + Adapter ]
+   [ NoSQL (Search DB) ]    [ SQL DB - Replicas ]     [ Kafka Events ]
+          |                       |                         |
+   [ Facade + Adapter ]     [ Kafka Producer ]        [ PG Adapter: UPI, CC ]
+  (FlightAdapter, Train...)        |                         |
+                                   |                  [ Third-Party PG API ]
+                            [ Notification Service ]
+                                   |
+                             [ Kafka Consumer ]
+                                   |
+                        [ Email / SMS Notification ]
+
+
+ Can SQL DBs Have Replicas?
+Yes! SQL databases like PostgreSQL, MySQL, and even Oracle support master-slave (or primary-replica) replication.
+
+Primary (Master) handles all writes.
+
+Replicas (Slaves) handle reads to reduce load on the primary.
+
+This is very common in scalable systems.
+
+⚠️ But Is It Strongly Consistent?
+By default:
+
+Replication is asynchronous → eventual consistency on replicas.
+
+You might read slightly stale data from replicas.
+
+🧠 What If You Need Strong Consistency?
+Use Primary (Master) for Critical Reads
+
+For example, during payment processing or booking confirmation, always read from master.
+
+Use Synchronous Replication (optional)
+
+Guarantees consistency but adds latency and slows down writes.
+
+Rarely used for all replicas; maybe for 1 critical replica.
+
+Read-After-Write Guarantee (via sticky sessions or read-your-write strategy):
+
+After a user books, their request temporarily hits master for read, not replica.
+
+
+Aspect	            Recommendation
+Write Operations	Always go to SQL Master
+Non-Critical Read Ops	Use Replicas (may have slight lag)
+Critical Read Ops	Use Master DB to ensure consistency
+Replication Type	Default: Asynchronous
+When to Consider Sync Replication	If data consistency is absolutely critical
