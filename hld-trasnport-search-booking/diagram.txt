@@ -54,7 +54,7 @@ Read-After-Write Guarantee (via sticky sessions or read-your-write strategy):
 After a user books, their request temporarily hits master for read, not replica.
 
 
-Aspect	            Recommendation
+Aspect	            git remote add origin https://github.com/Ayushagrawals/HLD.gitRecommendation
 Write Operations	Always go to SQL Master
 Non-Critical Read Ops	Use Replicas (may have slight lag)
 Critical Read Ops	Use Master DB to ensure consistency
