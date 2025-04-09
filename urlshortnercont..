@@ -1,0 +1,88 @@
+Great final doubt — and it's **super important** when designing a cache for systems like TinyURL where **billions of mappings** can exist.
+
+Let’s break it down clearly 👇
+
+---
+
+## 🧠 Question:
+> **If huge traffic (millions/billions of requests) is coming, how do we know how much memory/cache size is needed? Is the Redis hash map fixed-size?**
+
+---
+
+## ✅ Key Clarifications
+
+### 1. **Redis (or any cache) is not a fixed-size hash map**
+- Redis uses internal **hash tables**, but *you* configure the **memory limit**.
+- You don’t define the number of keys in advance — Redis **grows as you insert more keys**, until it hits the **configured max memory**.
+
+### Example:
+```bash
+maxmemory 4gb
+maxmemory-policy allkeys-lru
+```
+> This means: Redis can store as much as it wants, up to 4GB. Beyond that, it starts **evicting keys** using **Least Recently Used (LRU)**.
+
+---
+
+## 🔢 2. **How Do You Estimate Cache Size Needed?**
+
+It depends on:
+
+| Metric             | Description                             |
+|--------------------|-----------------------------------------|
+| Avg Key Size       | Length of short code (e.g., 6 chars)    |
+| Avg Value Size     | Length of long URL                      |
+| Entry Overhead     | Metadata per key-value (roughly 50–100B)|
+| Number of Entries  | How many entries you want to keep       |
+
+### 👉 Example Estimate:
+- Avg key size = 6 chars = ~6 bytes
+- Avg long URL = 100 chars = ~100 bytes
+- Overhead = ~100 bytes per entry
+- Total per entry ≈ 200 bytes
+
+If you want to cache:
+- **10 million mappings** → 200 * 10M = ~2 GB
+- **1 billion mappings** → 200 * 1B = ~200 GB → Needs a large Redis cluster or DB fallback
+
+---
+
+## 🧊 3. **Can We Store All in Cache?**
+
+> ❌ **No** — usually not feasible or cost-effective for billions of entries.
+
+### So what do we do?
+- ✅ Cache only **hot** or **recently accessed** URLs (LRU or LFU eviction).
+- ✅ Use **Redis + persistent DB combo**:
+  - Redis handles reads for popular URLs.
+  - DB is fallback when Redis doesn’t have it.
+
+---
+
+## 🛠️ Cache Strategy (Practical Setup)
+
+| Tier         | What It Stores                         | Why It’s Needed                            |
+|--------------|-----------------------------------------|--------------------------------------------|
+| Redis Cache  | Hot shortCode → longUrl mappings        | Fast lookups for frequently used URLs      |
+| DB (MySQL)   | All shortCode ↔ longUrl mappings        | Reliable storage of all mappings           |
+
+---
+
+## ⚠️ Bonus Tip: Cache Miss Handling
+
+If a shortCode is not in Redis:
+1. Query the DB
+2. If found, populate Redis again → **Lazy loading**
+
+---
+
+## ✅ TL;DR
+
+- Redis hash map is **not fixed** in size — it grows with data, up to the memory limit.
+- You **configure** Redis memory and eviction policy.
+- For huge scale, only cache **hot data**, and keep full data in DB.
+- Use memory estimation (200B per entry) to guide sizing.
+
+---
+
+Want me to give you a **memory estimator script** or formula you can reuse in your GitHub notes?
