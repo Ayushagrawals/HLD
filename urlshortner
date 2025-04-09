@@ -1,0 +1,103 @@
+Absolutely! Here's a clean **`README.md`**-style breakdown of the three approaches we discussed for **TinyURL short code generation**, along with **trade-offs** for each.
+
+---
+
+```markdown
+# 🔗 TinyURL Short Code Generation Approaches
+
+This document summarizes three common approaches to generating short URLs at scale, along with their trade-offs in terms of performance, collision risk, scalability, and implementation complexity.
+
+---
+
+## ✅ 1. **Hash-Based Generation**
+
+### 🔧 How It Works
+- Compute a hash of the long URL (`MD5`, `SHA256`, or `hashCode()`).
+- Encode part of the hash to Base62 to get the short URL.
+- Store mapping:  
+  `shortCode → longUrl`
+
+### ✅ Pros
+- Same long URL always gives the same short code (idempotent).
+- No need to track a counter or range.
+
+### ❌ Cons
+- **Risk of hash collisions**, especially with truncated hash.
+- Requires **lookup in DB/Redis** before insert to detect duplicates.
+- Slower under high load due to duplicate checks.
+- Difficult to shard/distribute generation.
+
+---
+
+## 🚀 2. **Range-Based Pre-Allocated ID Generation (Recommended for Scale)**
+
+### 🔧 How It Works
+- Central service assigns each app server a **non-overlapping numeric range** (e.g., 1M IDs).
+- Each server keeps a **local counter**.
+- Encode the counter to Base62 to create the short code.
+- Store mapping:  
+  `shortCode → longUrl`
+
+### ✅ Pros
+- **No collisions** guaranteed (ranges are unique).
+- **High throughput** — No DB call during generation.
+- Scales horizontally — just give more ranges to new servers.
+- No hashing = deterministic + fast.
+
+### ❌ Cons
+- Requires logic to manage range assignments and renewals.
+- Server crash may waste unused part of range (can be mitigated).
+
+---
+
+## ⚙️ 3. **Precomputed Short Codes (Pre-generated Pool)**
+
+### 🔧 How It Works
+- Pre-generate a large pool of short codes (e.g., `aaaa`, `aaab`, ..., `ZZZZZZ`).
+- Store in a database table as unassigned.
+- When a long URL comes in:
+  - Fetch an unused code from the pool.
+  - Assign it to the long URL.
+  - Mark the code as "used".
+
+### ✅ Pros
+- Very simple and **no real-time computation** needed.
+- No hash or range management.
+
+### ❌ Cons
+- **Pre-generation takes time and space**.
+- Pool can be exhausted under heavy load.
+- Requires locking or atomic DB updates to avoid race conditions.
+- Not inherently scalable across distributed servers unless pool is partitioned.
+
+---
+
+## 📊 Summary Comparison
+
+| Feature                     | Hash-Based         | Range-Based (Recommended) | Precomputed Pool       |
+|----------------------------|--------------------|---------------------------|------------------------|
+| Collision Risk             | ⚠️ Yes              | ✅ No                      | ✅ No (with locking)    |
+| Fast Generation            | ⚠️ Medium (check DB)| ✅ Very Fast               | ✅ Fast                 |
+| Scalable                   | ⚠️ Hard             | ✅ Easy to scale           | ⚠️ Medium (with care)   |
+| Idempotent (Same URL → Same Code) | ✅ Yes      | ❌ No (unless stored)      | ❌ No                   |
+| Complexity                 | ✅ Simple           | ⚠️ Medium (range mgmt)     | ✅ Simple               |
+| Ideal For                  | Low-scale apps      | High-scale, distributed   | Low/medium-scale apps  |
+
+---
+
+## 💡 Recommendation
+
+- For **large-scale systems**, go with **range-based generation**. It's fast, collision-free, and horizontally scalable.
+- For **low/medium-scale**, **hash-based** or **precomputed pool** is fine, depending on whether you want idempotency.
+
+---
+
+## 📚 References
+- Twitter Snowflake ID Generator
+- Base62 encoding
+- Redis/DB caching strategies
+```
+
+---
+
+Let me know if you'd like a diagram or to turn this into a markdown file directly. I can also help format it in your GitHub style (emoji/no emoji, headings depth, etc).
