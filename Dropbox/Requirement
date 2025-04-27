@@ -1,0 +1,41 @@
+/*Funcitonal Requirement
+
+Upload any huge file in system
+Download the huge file
+Share the file
+Sync the file*/
+//Ask how do we decide the chunks on the basis of client if it's not the case. 
+POST 
+
+
+FR ->  NRF -> Entities  -> API   -> HLD   -> Deep Dives
+
+NFR
+
+Availability
+security
+huge file
+500gb
+low latency
+
+Entities -
+
+User
+File
+FileMetadata
+
+API:
+
+/upload
+{
+  File:
+  FileMetadata:
+}
+Get /download/filename
+
+POST /access/
+{
+userid
+filename
+}
+GET
